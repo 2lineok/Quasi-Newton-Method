@@ -1,25 +1,26 @@
 clear all
-results = struct('Method', {}, 'Iterations', {}, 'Time', {});
 % Parameters
-N = 1000; % Number of interior points
+N = 1000; % Number of grid points
 h = 1 / (N - 1); % Step size
 x = linspace(0, 1, N); % Grid points including boundaries
 x=x';
-% Initial guess for u (starting with zero or any other initial guess)
+% Initial guess for u 
 u = zeros(N, 1);
-% Tolerance and maximum iterations for Newton's method
+% Tolerance and maximum iterations for (Quasi-)Newton's method
 tol = 1e-10;
 max_iter = 100;
 
 u0x = x;
 
-num_iterations=100;
-scales = [0.1,0.2,0.5,1.0];
-%defome nonlinear function
+%The number of trial
+num_iterations=1;
+%Perturbation scale
+scales = [0.1];
+%Define nonlinear function and it's derivative
 nonli = @(x) x.^2;
 nonli_df= @(x) 2.*x ;
 
-
+%Find numerical solution using Newtons Method
 for iter = 1:max_iter
     % Compute F(u) and the Jacobian J
     F = zeros(N, 1);
@@ -27,8 +28,7 @@ for iter = 1:max_iter
     u(1)=0;
     u(N)=1;
     for i = 1:N
-        % x_i for the current node
-        x_i = x(i); % +1 because x includes boundaries
+        x_i = x(i);
         
         % Right-hand side
         rhs = 0; 
@@ -64,20 +64,17 @@ end
 
 
 
+%Saving numerical solution in u_exact
 u_exact=u;
-% Tolerance and maximum iterations for Newton's method
 
 
 
 
 for scale=scales
 
-for op=1:10
-    iterations = zeros(num_iterations, 1);
-    times = zeros(num_iterations, 1);
+for op=1 %If op=1 it is Newton if op=2 it is Quasi-Newton method
 for repeat=1:num_iterations
-
-
+%Define perturbation
 perturbation=0;
 for itt1=1:5
     u1x=u0x.^(itt1-1);
@@ -91,7 +88,7 @@ u=u_exact+perturbation;
 
 tic;
 
-% Newton's method loop
+% (Quasi-)Newton's method loop
 for iter = 1:max_iter
     % Compute F(u) and the Jacobian J
     F = zeros(N, 1);
@@ -99,8 +96,7 @@ for iter = 1:max_iter
     u(1)=0;
     u(N)=1;
     for i = 1:N
-        % x_i for the current node
-        x_i = x(i); % +1 because x includes boundaries
+        x_i = x(i); 
         
         % Right-hand side
         rhs = 0; 
@@ -126,23 +122,8 @@ for iter = 1:max_iter
         mi=min(nonli_df(u(:)));
     end
     if op==2
+        %\Beta size
         J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*((mx+mi)/2));
-    elseif op==3
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*((mx+mi)));
-    elseif op==4
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*((mx+mx)/2));
-    elseif op==5
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*((mi+mi)/2));
-    elseif op==6
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*0.1);
-    elseif op==7
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*0.5);
-    elseif op==8
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*1);
-    elseif op==9
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*5);
-    elseif op==10
-        J(2:end-1,2:end-1)=J(2:end-1,2:end-1)-diag((h).*nonli_df(u(2:end-1)))+eye(N-2).*(h*10);
     end
 
 
@@ -157,72 +138,23 @@ for iter = 1:max_iter
         break;
     end
 end
+
 % Check if the method did not converge
 elapsed_time=toc;
-iterations(repeat) = iter;
-times(repeat) = elapsed_time;
 
 if iter == max_iter
-    warning('Newton''s method did not converge.');
-    op
-    iter
+    warning('(Quasi-)Newton''s method did not converge.');
 else
-fprintf('Converged after %d iterations when op is %g and perturbation as %g with time %g error is %g.\n', iter,op,scale,elapsed_time,max(abs(u-u_exact)));
-end
-
-
-end
-avg_iterations = mean(iterations);
-std_iterations = std(iterations);
-
-avg_times = mean(times);
-std_times = std(times);
-
-results(op).Method = sprintf('Method %d', op);
-results(op).Iterations = [results(op).Iterations, {strcat(sprintf('%.1f ',avg_iterations),' $\\pm$ ',sprintf(' %.1f',std_iterations))}];
-results(op).Time = [results(op).Time, {strcat(sprintf('%.2f ',avg_times),' $\\pm$ ',sprintf(' %.2f',std_times))}];
-
+    fprintf('Converged after %d iterations when op is %g, perturbation as %g with time %g. The error is %g.\n', iter,op,scale,elapsed_time,max(abs(u-u_exact)));
 end
 
 
 end
 
-
-
-latex_methods = { ...
-    'Newtons method', ...
-    '$\\beta=\\frac{min+max}{2}$', ...
-    '$\\beta={min+max}$', ...
-    '$\\beta=max$', ...
-    '$\\beta=min$', ...
-    '$\\beta=0.1$', ...
-    '$\\beta=0.5$', ...
-    '$\\beta=1$', ...
-    '$\\beta=5$', ...
-    '$\\beta=10$', ...
-};
-
-
-latex_table = '\\begin{table}[h!] \n \\centering \n \\begin{tabular}{|c|c|c|c|c|c|} \n \\hline \n';
-latex_table = [latex_table, '\\multirow{2}{*}{Method} & \\multirow{2}{*}{Metric} & \\multicolumn{4}{c|}{Perturbation Scale} \\\\ \\cline{3-6}\n'];
-latex_table = [latex_table, ' & & 0.1 & 0.2 & 0.5 & 1 \\\\ \\hline'];
-
-for i = 1:length(results)
-    method =latex_methods{i};
-    iterations = results(i).Iterations;
-    time = results(i).Time;
-    
-    % Add method row with multirow for iterations and time
-    latex_table = [latex_table, '\\multirow{2}{*}',sprintf('{%s} & Iterations & ', method),strjoin(iterations, ' & ')];
-    latex_table = [latex_table,'\\\\ \\cline{2-6} \n'];
-    latex_table = [latex_table, ' & Time (s) & ', strjoin(results(i).Time, ' & ')];
-    latex_table = [latex_table,'\\\\ \\hline \n'];
 end
 
+end
 
-latex_table = [latex_table, '\\end{tabular}\n\\caption{Convergence results for different methods}\n\\label{table:results1D}\n\\end{table}\n'];
-
-% Write LaTeX table to file
-fid = fopen('result1d_3.tex', 'w');
-fprintf(fid, latex_table);
-fclose(fid);
+plot(x,u_exact)
+hold on
+plot(x,u,"--")
