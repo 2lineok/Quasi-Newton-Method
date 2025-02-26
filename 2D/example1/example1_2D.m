@@ -107,7 +107,7 @@ for iter=1:num_iterations
         end
         if norm(er(:), inf) < tol || any(isnan(er(:)))
             if op==1
-                u0=u_vector.reshape(size(u0));
+                u0 = reshape(u_vector, size(u0));
             end
             break
         end
