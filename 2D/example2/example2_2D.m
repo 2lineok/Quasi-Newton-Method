@@ -99,7 +99,8 @@ for op = 1 %If op=1 it is Newton if op=2 it is Quasi-Newton method
 
         if norm(res(:), inf) < tol
             if op==1
-                u0=u_vector.reshape(size(u0));
+                u0=reshape(u_vector, size(u0));
+                %u_vector.reshape(size(u0));
             end
             break
         end
